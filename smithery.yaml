@@ -1,0 +1,9 @@
+# Smithery configuration for AkiraZ1/godot-mcp
+# https://smithery.ai/docs/config
+
+startCommand:
+  type: stdio
+  config:
+    command: node
+    args:
+      - server/server.mjs
