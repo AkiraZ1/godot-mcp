@@ -124,6 +124,8 @@ implements it can use this server unmodified.
 | `select_node`, `get_editor_state` | Editor selection/state, e.g. before a screenshot. |
 | `run_game`, `stop_game` | Play the main scene or a specific one; stop it. |
 | `capture_editor_screenshot` | Screenshot of the editor window (needs a real window — not headless). |
+| `get_project_setting`, `set_project_setting` | Read/write any `ProjectSettings` key (e.g. `application/config/name`), saved to `project.godot`. |
+| `list_autoloads`, `add_autoload`, `remove_autoload` | Inspect and manage autoload singletons. Changes take effect on the next editor/project restart. |
 
 ### CLI tools (work even if the editor isn't running)
 
@@ -131,6 +133,8 @@ implements it can use this server unmodified.
 |---|---|
 | `godot_build` | Runs `dotnet build` for C# projects and returns compiler errors. |
 | `godot_check_boot` | Boots the project headless for a few seconds and reports startup/script errors. |
+| `godot_run_gut_tests` | Runs the [GUT](https://github.com/bitwes/Gut) test suite headless (requires the GUT addon installed in your project). |
+| `godot_export` | Runs a configured export preset (`export_presets.cfg`) to produce a build. |
 
 ## How it works
 
@@ -151,6 +155,16 @@ newline-delimited JSON requests and calls straight into the executor.
   `--headless`), since there's no framebuffer to read otherwise.
 - No LSP-backed diagnostics tool yet (GDScript or C#) — `godot_check_boot`
   only catches startup errors, not deeper static analysis.
+- `add_autoload`/`remove_autoload` edit `project.godot` directly; the running
+  editor won't reflect the change (and won't instantiate/remove the
+  singleton) until you restart it or reopen the project.
+
+## Also on Smithery
+
+This server is listed on [Smithery](https://smithery.ai) (see
+[`smithery.yaml`](smithery.yaml)) for discovery alongside other MCP servers.
+Since it bridges to a Godot editor running on your own machine, install it
+locally either way — Smithery's cloud sandbox has no access to your editor.
 
 ## Contributing
 

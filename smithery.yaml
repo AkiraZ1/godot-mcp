@@ -1,9 +1,38 @@
 # Smithery configuration for AkiraZ1/godot-mcp
 # https://smithery.ai/docs/config
+#
+# This is a *local* stdio MCP server: it must run on the same machine as the
+# Godot editor it talks to (it reaches the editor's plugin over
+# 127.0.0.1). It works through Smithery's local install flow, but it cannot
+# be meaningfully hosted in Smithery's cloud sandbox, since that sandbox has
+# no access to your local Godot editor.
+#
+# Requires `npm install` to have been run in server/ beforehand (see README).
 
 startCommand:
   type: stdio
-  config:
-    command: node
-    args:
-      - server/server.mjs
+  configSchema:
+    type: object
+    properties:
+      godotProjectPath:
+        type: string
+        description: Absolute path to the folder containing your project's project.godot. Defaults to the current working directory.
+      godotBin:
+        type: string
+        description: Path to the Godot executable, if it isn't discoverable on PATH as godot4/godot/Godot.
+      godotMcpPort:
+        type: number
+        default: 8756
+        description: TCP port the Godot editor plugin's bridge listens on. Must match the addon's Project Settings > Mcp Bridge > Port.
+  commandFunction: |-
+    (config) => ({
+      command: 'node',
+      args: ['server/server.mjs'],
+      env: {
+        ...(config.godotProjectPath ? { GODOT_PROJECT_PATH: config.godotProjectPath } : {}),
+        ...(config.godotBin ? { GODOT_BIN: config.godotBin } : {}),
+        ...(config.godotMcpPort ? { GODOT_MCP_PORT: String(config.godotMcpPort) } : {}),
+      }
+    })
+  exampleConfig:
+    godotProjectPath: /absolute/path/to/your/godot/project
