@@ -138,7 +138,27 @@ func get_tool_definitions() -> Array:
 				"scene_path": {"type": "string", "description": "Optional res:// path of a specific scene to run."}
 			}}},
 		{"name": "stop_game", "description": "Stops the game session started by run_game."},
-		{"name": "capture_editor_screenshot", "description": "Captures a screenshot of the full editor window and returns it as an image."}
+		{"name": "capture_editor_screenshot", "description": "Captures a screenshot of the full editor window and returns it as an image."},
+		{"name": "get_project_setting", "description": "Reads a setting from ProjectSettings (e.g. 'display/window/size/viewport_width', 'application/config/name').",
+			"parameters": {"type": "object", "properties": {
+				"name": {"type": "string", "description": "Property path in ProjectSettings."}
+			}, "required": ["name"]}},
+		{"name": "set_project_setting", "description": "Sets and saves a setting in ProjectSettings (and saves to project.godot).",
+			"parameters": {"type": "object", "properties": {
+				"name": {"type": "string", "description": "Property path in ProjectSettings."},
+				"value": {"description": "Value to set (string, number, bool, etc)."}
+			}, "required": ["name", "value"]}},
+		{"name": "list_autoloads", "description": "Lists all configured autoload singletons in the project.",
+			"parameters": {"type": "object", "properties": {}}},
+		{"name": "add_autoload", "description": "Registers an autoload singleton in project.godot (script or scene).",
+			"parameters": {"type": "object", "properties": {
+				"name": {"type": "string", "description": "Singleton name (e.g. 'GlobalState')."},
+				"path": {"type": "string", "description": "Path to the script or scene (res://...)."}
+			}, "required": ["name", "path"]}},
+		{"name": "remove_autoload", "description": "Removes an autoload singleton from project.godot.",
+			"parameters": {"type": "object", "properties": {
+				"name": {"type": "string", "description": "Singleton name to remove."}
+			}, "required": ["name"]}}
 	]
 
 # ---------------------------------------------------------------------------
@@ -175,6 +195,11 @@ func execute_tool(tool_name: String, args: Dictionary) -> Dictionary:
 		"run_game": return _run_game(args)
 		"stop_game": return _stop_game()
 		"capture_editor_screenshot": return _capture_editor_screenshot()
+		"get_project_setting": return _get_project_setting(args)
+		"set_project_setting": return _set_project_setting(args)
+		"list_autoloads": return _list_autoloads()
+		"add_autoload": return _add_autoload(args)
+		"remove_autoload": return _remove_autoload(args)
 		_:
 			return _err("Unknown tool '%s'." % tool_name)
 
@@ -689,3 +714,63 @@ func _capture_editor_screenshot() -> Dictionary:
 	var r = _ok("Screenshot saved.")
 	r["image_path"] = ProjectSettings.globalize_path(out_path)
 	return r
+
+# ---------------------------------------------------------------------------
+# Project settings & Autoload tools
+# ---------------------------------------------------------------------------
+
+func _get_project_setting(args: Dictionary) -> Dictionary:
+	var setting_name = str(args.get("name", ""))
+	if setting_name == "":
+		return _err("Setting name is required.")
+	if not ProjectSettings.has_setting(setting_name):
+		return _err("Setting '%s' does not exist." % setting_name)
+	var val = ProjectSettings.get_setting(setting_name)
+	return _ok("Setting %s = %s" % [setting_name, str(val)], val)
+
+func _set_project_setting(args: Dictionary) -> Dictionary:
+	var setting_name = str(args.get("name", ""))
+	if setting_name == "":
+		return _err("Setting name is required.")
+	var val = args.get("value")
+	ProjectSettings.set_setting(setting_name, val)
+	var err = ProjectSettings.save()
+	if err != OK:
+		return _err("Failed to save project settings (error %d)" % err)
+	return _ok("Set and saved %s = %s" % [setting_name, str(val)])
+
+func _list_autoloads() -> Dictionary:
+	var list: Array = []
+	for prop in ProjectSettings.get_property_list():
+		var pname: String = prop.get("name", "")
+		if pname.begins_with("autoload/"):
+			var autoload_name = pname.trim_prefix("autoload/")
+			var path_val = ProjectSettings.get_setting(pname)
+			list.append({"name": autoload_name, "path": path_val})
+	return _ok(JSON.stringify(list), list)
+
+func _add_autoload(args: Dictionary) -> Dictionary:
+	var name = str(args.get("name", "")).strip_edges()
+	var path = str(args.get("path", "")).strip_edges()
+	if name == "" or path == "":
+		return _err("Both 'name' and 'path' are required.")
+	if not FileAccess.file_exists(path):
+		return _err("Autoload target file does not exist: %s" % path)
+	ProjectSettings.set_setting("autoload/" + name, "*" + path)
+	var err = ProjectSettings.save()
+	if err != OK:
+		return _err("Failed to save project settings (error %d)" % err)
+	return _ok("Added autoload singleton: %s -> %s" % [name, path])
+
+func _remove_autoload(args: Dictionary) -> Dictionary:
+	var name = str(args.get("name", "")).strip_edges()
+	if name == "":
+		return _err("Autoload 'name' is required.")
+	var key = "autoload/" + name
+	if not ProjectSettings.has_setting(key):
+		return _err("Autoload '%s' is not registered." % name)
+	ProjectSettings.set_setting(key, null)
+	var err = ProjectSettings.save()
+	if err != OK:
+		return _err("Failed to save project settings (error %d)" % err)
+	return _ok("Removed autoload singleton: %s" % name)

@@ -174,10 +174,56 @@ const LOCAL_TOOLS = {
       return { content: [{ type: "text", text }], isError: problems.length > 0 };
     },
   },
+  godot_run_gut_tests: {
+    description:
+      "Runs GUT (Godot Unit Test) automated test suite in headless mode. Requires GUT addon installed in the project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        gut_dir: { type: "string", description: "Directory with tests (default: 'res://test/unit' or as configured in GUT)." },
+        gut_prefix: { type: "string", description: "Test script prefix (default: 'test_')." },
+      },
+    },
+    run: async (args) => {
+      const godot = findGodotBinary();
+      if (!godot) {
+        return { content: [{ type: "text", text: "Could not find a Godot executable. Set GODOT_BIN to its full path." }], isError: true };
+      }
+      const gutArgs = ["--headless", "--path", PROJECT_PATH, "-s", "res://addons/gut/gut_cmdln.gd"];
+      if (args?.gut_dir) gutArgs.push("-gdir=" + args.gut_dir);
+      if (args?.gut_prefix) gutArgs.push("-gprefix=" + args.gut_prefix);
+      const { cmd, args: spawnArgs } = godotSpawnArgs(godot, gutArgs);
+      const r = await runProcess(cmd, spawnArgs, PROJECT_PATH, 180000);
+      return formatShellResult(r);
+    },
+  },
+  godot_export: {
+    description:
+      "Exports the Godot project using a configured export preset (e.g. 'Windows Desktop', 'Linux/X11', 'Web', 'macOS').",
+    inputSchema: {
+      type: "object",
+      properties: {
+        preset: { type: "string", description: "Name of the export preset defined in export_presets.cfg." },
+        output_path: { type: "string", description: "Target export file path." },
+        release: { type: "boolean", description: "Export in release mode (default: true). If false, exports debug." },
+      },
+      required: ["preset", "output_path"],
+    },
+    run: async (args) => {
+      const godot = findGodotBinary();
+      if (!godot) {
+        return { content: [{ type: "text", text: "Could not find a Godot executable. Set GODOT_BIN to its full path." }], isError: true };
+      }
+      const flag = args.release === false ? "--export-debug" : "--export-release";
+      const { cmd, args: spawnArgs } = godotSpawnArgs(godot, ["--headless", "--path", PROJECT_PATH, flag, args.preset, args.output_path]);
+      const r = await runProcess(cmd, spawnArgs, PROJECT_PATH, 300000);
+      return formatShellResult(r);
+    },
+  },
 };
 
 const server = new Server(
-  { name: "godot-mcp-bridge", version: "0.1.0" },
+  { name: "godot-mcp-bridge", version: "1.0.0" },
   { capabilities: { tools: {} } },
 );
 
