@@ -1,6 +1,6 @@
 {
   "name": "godot-mcp-bridge",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server that lets any MCP-speaking AI coding agent (Claude Code, Codex, Antigravity, Hermes, OpenClaw, ...) drive the Godot editor directly: scenes, nodes, scripts, resources, running the game, and editor state.",
   "type": "module",
   "private": true,

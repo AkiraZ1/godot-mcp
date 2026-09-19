@@ -223,7 +223,7 @@ const LOCAL_TOOLS = {
 };
 
 const server = new Server(
-  { name: "godot-mcp-bridge", version: "1.0.0" },
+  { name: "godot-mcp-bridge", version: "1.1.0" },
   { capabilities: { tools: {} } },
 );
 
